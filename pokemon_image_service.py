@@ -1,6 +1,6 @@
 import requests
 
-def get_image(pokemon_name) -> bytes | None:
+def get_image(pokemon_name: str) -> bytes | None:
     url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
 
     try:
@@ -16,10 +16,10 @@ def get_image(pokemon_name) -> bytes | None:
         image.raise_for_status()
                 
         return image.content
-    except requests.exceptions.RequestException as ex:
+    except:
         return None
 
-def save_image(image, saveLocation):
+def save_image(image: bytes, saveLocation: str):
     # save image to saveLocation
     with open(saveLocation, "wb") as file:
         file.write(image)

@@ -1,6 +1,6 @@
 from pathlib import Path
-from pokemon_image_service import get_pokemon_image
-from pokemon_image_service import save_pokemon_image
+from pokemon_image_service import get_image
+from pokemon_image_service import save_image
 
 RED = "\033[31m"
 GREEN = "\033[32m"
@@ -18,14 +18,14 @@ def main():
         print(f"No save location provided, using default location: {saveLocation}")
 
     for name in names:
-        image = get_pokemon_image(name.strip())
+        image = get_image(name.strip())
 
         if image is None:
             print(f"{RED}Failed to get image for {name}{WHITE}")
             continue
 
         filepath = Path(saveLocation) / f"{name.strip().lower()}.png"
-        save_pokemon_image(image, filepath)
+        save_image(image, str(filepath))
 
     print(f"{GREEN}Image/s saved to {saveLocation}{WHITE}")
 
