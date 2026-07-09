@@ -2,11 +2,22 @@ from fastapi import FastAPI, File, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 import base64
 from pokemon_image_service import get_image
+from typing import Literal
+import pandas as pd
 
 app = FastAPI()
+
 class PokemonImagesResponse(BaseModel):
     base64_images_by_name: dict[str, str]
     could_not_get_images: list[str]
+
+class PokemonCsvRequest(BaseModel):
+    csv_file: UploadFile = File(...)
+    sort_by_field: str
+    sort_direction: Literal["asc", "desc"]
+
+class NewPokemonParquetResponse(BaseModel):
+    parquet_file: UploadFile = File(...)
 
 @app.get("/pokemon/image/{pokemon_name}")
 async def get_pokemon_image(pokemon_name: str):
@@ -43,10 +54,40 @@ async def get_pokemon_images(pokemon_names: list[str]):
             could_not_get_images = could_not_get_images
         )
 
-@app.post("/pokemon/images/from-names-csv", response_model = None)
-async def get_parquet_from_csv(csv_file: UploadFile = File(...)):
-    csv_file_content = await csv_file.read()
+# Converts a CSV file of pokemon names into a parquet file with images
+# The CSV input should have a column called "name" with the pokemon names
+# the CSV input can have other columns that can be sorted by, but should not have a column called "image"
+# The parquet output will add a column called "image" with the base64 encoded image
+# The parquet file will be sorted by the specified field and direction
+@app.post("/pokemon/ideas/csv-to-parquet", response_model = None)
+async def get_parquet_from_csv(request: PokemonCsvRequest):
+    could_not_get_images: list[str] = []
 
-    # return the csv again for now
-    return Response(content=csv_file_content, media_type="text/csv")
-    
+    # read the csv file into a pandas dataframe
+    df = pd.read_csv(request.csv_file.file)
+
+    # get the image for each pokemon and add it to the dataframe
+    names: list[str] = df["name"].tolist()
+    for name in df["name"]:
+        image = get_image(name)
+
+        if image is None:
+            could_not_get_images.append(name)
+            df.loc[df["name"] == name, "image"] = "Not found"
+        else:
+            df.loc[df["name"] == name, "image"] = base64.b64encode(image).decode("ascii")
+
+    # sort the dataframe by the specified field and direction
+    df = df.sort_values(
+        by = request.sort_by_field,
+        ascending = True if request.sort_direction == 'asc' else False
+    )
+
+    # convert the dataframe to a parquet file
+    parquet_file = df.to_parquet()
+
+    return Response(
+        content=parquet_file,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=pokemon.parquet"},
+    )
