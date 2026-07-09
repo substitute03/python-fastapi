@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 import base64
 from pokemon_image_service import get_image
@@ -60,16 +60,20 @@ async def get_pokemon_images(pokemon_names: list[str]):
 # The parquet output will add a column called "image" with the base64 encoded image
 # The parquet file will be sorted by the specified field and direction
 @app.post("/pokemon/ideas/csv-to-parquet", response_model = None)
-async def get_parquet_from_csv(request: PokemonCsvRequest):
+async def get_parquet_from_csv(
+    csv_file: UploadFile = File(...),
+    sort_by_field: str = Form(...),
+    sort_direction: Literal["asc", "desc"] = Form(...)
+):
     could_not_get_images: list[str] = []
 
     # read the csv file into a pandas dataframe
-    df = pd.read_csv(request.csv_file.file)
+    df = pd.read_csv(csv_file.file)
 
     if "name" not in df.columns:
         raise HTTPException(status_code = 400, detail = "CSV file must have a column called 'name'")
 
-    if request.sort_by_field not in df.columns:
+    if sort_by_field not in df.columns:
         raise HTTPException(status_code = 400, detail = "The specified sort by field is not in the CSV file")
 
     # get the image for each pokemon and add it to the dataframe
@@ -85,8 +89,8 @@ async def get_parquet_from_csv(request: PokemonCsvRequest):
 
     # sort the dataframe by the specified field and direction
     df = df.sort_values(
-        by = request.sort_by_field,
-        ascending = True if request.sort_direction == 'asc' else False
+        by = sort_by_field,
+        ascending = True if sort_direction == 'asc' else False
     )
 
     # convert the dataframe to a parquet file
