@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 import base64
-from pokemon_image_service import get_image
+from pokemon_service import get_image
 from typing import Literal
 import pandas as pd
 

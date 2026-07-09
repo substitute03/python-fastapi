@@ -1,6 +1,6 @@
 from pathlib import Path
-from pokemon_image_service import get_image
-from pokemon_image_service import save_image
+from pokemon_service import get_image
+from pokemon_service import save_image
 
 RED = "\033[31m"
 GREEN = "\033[32m"
