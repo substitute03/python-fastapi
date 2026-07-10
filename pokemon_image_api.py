@@ -72,14 +72,20 @@ async def get_parquet_from_csv(
     # read the csv file into a pandas dataframe
     df: DataFrame = pd.read_csv(csv_file.file)
 
-    if "name" not in df.columns:
-        raise HTTPException(status_code = 400, detail = "CSV file must have a column called 'name'")
+    missing_columns = (pokemon_service
+        .check_for_columns(df, ["name", sort_by_field]))
 
-    if sort_by_field not in df.columns:
-        raise HTTPException(status_code = 400, detail = "The specified sort by field is not in the CSV file")
+    if len(missing_columns) > 0:
+        error: str = ""
+
+        for name in missing_columns:
+            error += f"\n{name}, "
+
+        error.removesuffix(" ");
+
+        raise HTTPException(status_code = 400, detail = error)
 
     # get the image for each pokemon and add it to the dataframe
-    names: list[str] = df["name"].tolist()
     for name in df["name"]:
         image = get_image(name)
 
