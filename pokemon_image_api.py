@@ -1,9 +1,11 @@
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 import base64
+import pokemon_service
 from pokemon_service import get_image
-from typing import Literal
 import pandas as pd
+from pandas import DataFrame
+from pokemon_service import SortDirection
 
 app = FastAPI()
 
@@ -14,7 +16,7 @@ class PokemonImagesResponse(BaseModel):
 class PokemonCsvRequest(BaseModel):
     csv_file: UploadFile = File(...)
     sort_by_field: str
-    sort_direction: Literal["asc", "desc"]
+    sort_direction: SortDirection
 
 class NewPokemonParquetResponse(BaseModel):
     parquet_file: UploadFile = File(...)
@@ -63,12 +65,12 @@ async def get_pokemon_images(pokemon_names: list[str]):
 async def get_parquet_from_csv(
     csv_file: UploadFile = File(...),
     sort_by_field: str = Form(...),
-    sort_direction: Literal["asc", "desc"] = Form(...)
+    sort_direction: SortDirection = Form(...)
 ):
     could_not_get_images: list[str] = []
 
     # read the csv file into a pandas dataframe
-    df = pd.read_csv(csv_file.file)
+    df: DataFrame = pd.read_csv(csv_file.file)
 
     if "name" not in df.columns:
         raise HTTPException(status_code = 400, detail = "CSV file must have a column called 'name'")
@@ -87,11 +89,10 @@ async def get_parquet_from_csv(
         else:
             df.loc[df["name"] == name, "image"] = base64.b64encode(image).decode("ascii")
 
-    # sort the dataframe by the specified field and direction
-    df = df.sort_values(
-        by = sort_by_field,
-        ascending = True if sort_direction == 'asc' else False
-    )
+    df = pokemon_service.sort_dataframe(
+        dataframe = df,
+        column_name = sort_by_field,
+        sort_direction = sort_direction)
 
     # convert the dataframe to a parquet file
     parquet_file = df.to_parquet()
