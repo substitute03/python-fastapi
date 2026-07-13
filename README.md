@@ -1,19 +1,23 @@
-# python-fastapi
+# PokePy
 
 FastAPI service for fetching Pokemon images from [PokeAPI](https://pokeapi.co/).
 
 ## Setup
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+poetry install
 ```
 
 ## Run the API
 
 ```powershell
-fastapi dev pokemon_image_api.py
+poetry run uvicorn pokepy.pokemon_image_api:app --reload
+```
+
+Or:
+
+```powershell
+poetry run fastapi dev src/pokepy/pokemon_image_api.py
 ```
 
 Interactive docs: http://127.0.0.1:8000/docs
@@ -21,5 +25,17 @@ Interactive docs: http://127.0.0.1:8000/docs
 ## Run the console app
 
 ```powershell
-python console_app.py
+poetry run pokepy-console
+```
+
+Or:
+
+```powershell
+poetry run python -m pokepy.console_app
+```
+
+## Run tests
+
+```powershell
+poetry run pytest
 ```

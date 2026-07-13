@@ -1,23 +1,25 @@
-from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
-from pydantic import BaseModel
 import base64
-import pokemon_service
-from pokemon_service import get_image
+
 import pandas as pd
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from pandas import DataFrame
-from pokemon_service import SortDirection
-from models.response import PokemonImagesResponse
+
+from pokepy import pokemon_service
+from pokepy.models.response import PokemonImagesResponse
+from pokepy.pokemon_service import SortDirection, get_image
 
 app = FastAPI()
+
 
 @app.get("/pokemon/image/{pokemon_name}")
 async def get_pokemon_image(pokemon_name: str):
     image = get_image(pokemon_name)
 
     if image is None:
-        raise HTTPException(status_code = 404, detail = "Pokemon not found")
+        raise HTTPException(status_code=404, detail="Pokemon not found")
     else:
         return Response(content=image, media_type="image/png")
+
 
 @app.post("/pokemon/images/", response_model=PokemonImagesResponse)
 async def get_pokemon_images(pokemon_names: list[str]):
@@ -33,36 +35,29 @@ async def get_pokemon_images(pokemon_names: list[str]):
             bytes_images_by_name[name] = image_or_none
 
     if len(bytes_images_by_name) == 0:
-        raise HTTPException(status_code = 404, detail = "Failed to get any images")
+        raise HTTPException(status_code=404, detail="Failed to get any images")
     else:
-        # encode the images to base64 so they can be serialized to json
         base64_images_by_name: dict[str, str] = {}
         for name in bytes_images_by_name:
             base64_images_by_name[name] = base64.b64encode(bytes_images_by_name[name]).decode("ascii")
 
-        return PokemonImagesResponse (
-            base64_images_by_name = base64_images_by_name,
-            could_not_get_images = could_not_get_images
+        return PokemonImagesResponse(
+            base64_images_by_name=base64_images_by_name,
+            could_not_get_images=could_not_get_images,
         )
 
-# Converts a CSV file of pokemon names into a parquet file with images
-# The CSV input should have a column called "name" with the pokemon names
-# the CSV input can have other columns that can be sorted by, but should not have a column called "image"
-# The parquet output will add a column called "image" with the base64 encoded image
-# The parquet file will be sorted by the specified field and direction
-@app.post("/pokemon/ideas/csv-to-parquet", response_model = None)
+
+@app.post("/pokemon/ideas/csv-to-parquet", response_model=None)
 async def get_parquet_from_csv(
     csv_file: UploadFile = File(...),
     sort_by_field: str = Form(...),
-    sort_direction: SortDirection = Form(...)
+    sort_direction: SortDirection = Form(...),
 ):
     could_not_get_images: list[str] = []
 
-    # read the csv file into a pandas dataframe
     df: DataFrame = pd.read_csv(csv_file.file)
 
-    missing_columns = (pokemon_service
-        .check_for_columns(df, ["name", sort_by_field]))
+    missing_columns = pokemon_service.check_for_columns(df, ["name", sort_by_field])
 
     if len(missing_columns) > 0:
         error: str = ""
@@ -72,9 +67,8 @@ async def get_parquet_from_csv(
 
         error = error.removesuffix(" ")
 
-        raise HTTPException(status_code = 400, detail = error)
+        raise HTTPException(status_code=400, detail=error)
 
-    # get the image for each pokemon and add it to the dataframe
     for name in df["name"]:
         image = get_image(name)
 
@@ -85,11 +79,11 @@ async def get_parquet_from_csv(
             df.loc[df["name"] == name, "image"] = base64.b64encode(image).decode("ascii")
 
     df = pokemon_service.sort_dataframe(
-        dataframe = df,
-        column_name = sort_by_field,
-        sort_direction = sort_direction)
+        dataframe=df,
+        column_name=sort_by_field,
+        sort_direction=sort_direction,
+    )
 
-    # convert the dataframe to a parquet file
     parquet_file = df.to_parquet()
 
     return Response(

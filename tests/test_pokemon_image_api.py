@@ -1,10 +1,9 @@
-from fastapi import HTTPException
-import pokemon_service
 import pandas as pd
-import pytest
+
+from pokepy import pokemon_service
+
 
 def test_missing_column_names_returned_when_columns_missing():
-    # arrange
     df = pd.DataFrame({
         "name": ["Bulbasaur", "Charmander", "Squirtle"],
         "type": ["Grass", "Fire", "Water"],
@@ -17,17 +16,16 @@ def test_missing_column_names_returned_when_columns_missing():
 
     columns_to_check = [
         "name", "type", "HP", "Atk",
-        "SpAtk", "SpDef", "Spe"]
+        "SpAtk", "SpDef", "Spe",
+    ]
 
-    # act
     result = pokemon_service.check_for_columns(df, columns_to_check)
 
-    # assert
     assert len(result) > 0
     assert result.__contains__("Spe")
 
+
 def test_http_exception_not_thrown_expected_columns_are_present():
-    # arrange
     df = pd.DataFrame({
         "name": ["Bulbasaur", "Charmander", "Squirtle"],
         "type": ["Grass", "Fire", "Water"],
@@ -41,10 +39,9 @@ def test_http_exception_not_thrown_expected_columns_are_present():
 
     columns_to_check = [
         "name", "type", "HP", "Atk",
-        "SpAtk", "SpDef", "Spe"]
+        "SpAtk", "SpDef", "Spe",
+    ]
 
-    # act
     result = pokemon_service.check_for_columns(df, columns_to_check)
 
-    # assert
     assert len(result) == 0

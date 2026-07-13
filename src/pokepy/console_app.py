@@ -1,14 +1,18 @@
 from pathlib import Path
-from pokemon_service import get_image
-from pokemon_service import save_image
+
+from pokepy.pokemon_service import get_image, save_image
 
 RED = "\033[31m"
 GREEN = "\033[32m"
 WHITE = "\033[0m"
 
+
 def main():
     name = input(
-        "Pokemon images and names sourced from https://pokeapi.co/api/v2/pokemon. Check here for specific names. Tip: for Megas, use this form: scizor-mega\nEnter a pokemon name. Use CSV syntax for multiple names: ")
+        "Pokemon images and names sourced from https://pokeapi.co/api/v2/pokemon. "
+        "Check here for specific names. Tip: for Megas, use this form: scizor-mega\n"
+        "Enter a pokemon name. Use CSV syntax for multiple names: "
+    )
     names = name.split(",")
 
     saveLocation = input("(Optional) Enter the save location (default is downloads folder): ")
@@ -29,4 +33,6 @@ def main():
 
     print(f"{GREEN}Image/s saved to {saveLocation}{WHITE}")
 
-main()
+
+if __name__ == "__main__":
+    main()

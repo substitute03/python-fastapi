@@ -13,10 +13,19 @@ dependencies = [
     "pyarrow (>=25.0.0,<26.0.0)"
 ]
 
+[project.scripts]
+pokepy-console = "pokepy.console_app:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = true
+
+[[tool.poetry.packages]]
+include = "pokepy"
+from = "src"
 
 [dependency-groups]
 dev = [
@@ -25,3 +34,6 @@ dev = [
     "pyright (>=1.1.411,<2.0.0)",
     "pandas-stubs (>=3.0.3.260530,<4.0.0.0)"
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

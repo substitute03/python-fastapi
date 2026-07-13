@@ -1,11 +1,14 @@
-from fastapi import HTTPException
-import requests
 from enum import Enum
+
+import requests
+from fastapi import HTTPException
 from pandas.core.api import DataFrame
+
 
 class SortDirection(Enum):
     ASCENDING = "asc"
     DESCENDING = "desc"
+
 
 def get_image(pokemon_name: str) -> bytes | None:
     url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
@@ -26,15 +29,16 @@ def get_image(pokemon_name: str) -> bytes | None:
         image_url = json_response["sprites"]["front_default"]
         image = requests.get(image_url)
         image.raise_for_status()
-                
+
         return image.content
     except HTTPException:
         return None
 
+
 def save_image(image: bytes, saveLocation: str):
-    # save image to saveLocation
     with open(saveLocation, "wb") as file:
         file.write(image)
+
 
 def sort_dataframe(dataframe: DataFrame, column_name: str, sort_direction: SortDirection) -> DataFrame:
     sort_ascending = (
@@ -43,16 +47,16 @@ def sort_dataframe(dataframe: DataFrame, column_name: str, sort_direction: SortD
     )
 
     sorted_dataframe = (dataframe
-        .sort_values(by=column_name, ascending = sort_ascending))
+        .sort_values(by=column_name, ascending=sort_ascending))
 
     return sorted_dataframe
 
-# Returns a list of any column names that are missing from the dataframe
+
 def check_for_columns(dataframe: DataFrame, column_names: list[str]) -> list[str]:
     missing_columns: list[str] = []
 
     for name in column_names:
         if name not in dataframe.columns:
-            missing_columns.append(name)     
+            missing_columns.append(name)
 
     return missing_columns
