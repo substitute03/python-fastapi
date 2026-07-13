@@ -1,0 +1,27 @@
+[project]
+name = "pokepy"
+version = "1"
+description = "Get pokemon images via REST API or download via a console app"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi (>=0.139.0,<0.140.0)",
+    "uvicorn (>=0.51.0,<0.52.0)",
+    "requests (>=2.34.2,<3.0.0)",
+    "pandas (>=3.0.3,<4.0.0)",
+    "python-multipart (>=0.0.32,<0.0.33)",
+    "pyarrow (>=25.0.0,<26.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.1,<10.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "pyright (>=1.1.411,<2.0.0)",
+    "pandas-stubs (>=3.0.3.260530,<4.0.0.0)"
+]

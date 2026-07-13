@@ -6,20 +6,9 @@ from pokemon_service import get_image
 import pandas as pd
 from pandas import DataFrame
 from pokemon_service import SortDirection
+from models.response import PokemonImagesResponse
 
 app = FastAPI()
-
-class PokemonImagesResponse(BaseModel):
-    base64_images_by_name: dict[str, str]
-    could_not_get_images: list[str]
-
-class PokemonCsvRequest(BaseModel):
-    csv_file: UploadFile = File(...)
-    sort_by_field: str
-    sort_direction: SortDirection
-
-class NewPokemonParquetResponse(BaseModel):
-    parquet_file: UploadFile = File(...)
 
 @app.get("/pokemon/image/{pokemon_name}")
 async def get_pokemon_image(pokemon_name: str):
@@ -81,7 +70,7 @@ async def get_parquet_from_csv(
         for name in missing_columns:
             error += f"\n{name}, "
 
-        error.removesuffix(" ");
+        error = error.removesuffix(" ")
 
         raise HTTPException(status_code = 400, detail = error)
 
