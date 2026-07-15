@@ -1,10 +1,9 @@
-import pandas as pd
-
+from polars import DataFrame
 from pokepy import pokemon_service
 
 
 def test_missing_column_names_returned_when_columns_missing():
-    df = pd.DataFrame({
+    df = DataFrame({
         "name": ["Bulbasaur", "Charmander", "Squirtle"],
         "type": ["Grass", "Fire", "Water"],
         "HP": [45, 39, 44],
@@ -26,7 +25,7 @@ def test_missing_column_names_returned_when_columns_missing():
 
 
 def test_http_exception_not_thrown_expected_columns_are_present():
-    df = pd.DataFrame({
+    df = DataFrame({
         "name": ["Bulbasaur", "Charmander", "Squirtle"],
         "type": ["Grass", "Fire", "Water"],
         "HP": [45, 39, 44],

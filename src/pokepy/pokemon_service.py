@@ -1,14 +1,11 @@
-from enum import Enum
-
 import requests
+
+from enum import Enum
 from fastapi import HTTPException
-from pandas.core.api import DataFrame
-
-
+from polars import DataFrame
 class SortDirection(Enum):
     ASCENDING = "asc"
     DESCENDING = "desc"
-
 
 def get_image(pokemon_name: str) -> bytes | None:
     url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
@@ -41,13 +38,13 @@ def save_image(image: bytes, saveLocation: str):
 
 
 def sort_dataframe(dataframe: DataFrame, column_name: str, sort_direction: SortDirection) -> DataFrame:
-    sort_ascending = (
-        True if sort_direction == SortDirection.ASCENDING
+    sort_desc = (
+        True if sort_direction == SortDirection.DESCENDING
         else False
     )
 
     sorted_dataframe = (dataframe
-        .sort_values(by=column_name, ascending=sort_ascending))
+        .sort(by=column_name, descending=sort_desc))
 
     return sorted_dataframe
 

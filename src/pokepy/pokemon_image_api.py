@@ -1,15 +1,13 @@
 import base64
+from io import BytesIO
+import polars as pl
 
-import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
-from pandas import DataFrame
-
 from pokepy import pokemon_service
 from pokepy.models.response import PokemonImagesResponse
 from pokepy.pokemon_service import SortDirection, get_image
 
 app = FastAPI()
-
 
 @app.get("/pokemon/image/{pokemon_name}")
 async def get_pokemon_image(pokemon_name: str):
@@ -55,7 +53,8 @@ async def get_parquet_from_csv(
 ):
     could_not_get_images: list[str] = []
 
-    df: DataFrame = pd.read_csv(csv_file.file)
+    # df: DataFrame = pd.read_csv(csv_file.file)
+    df = pl.read_csv(csv_file.file)
 
     missing_columns = pokemon_service.check_for_columns(df, ["name", sort_by_field])
 
@@ -69,14 +68,21 @@ async def get_parquet_from_csv(
 
         raise HTTPException(status_code=400, detail=error)
 
+    # build a list strings ("Not found" or the base64 string) for each pokemon
+    images: list[str] = []
     for name in df["name"]:
         image = get_image(name)
 
         if image is None:
             could_not_get_images.append(name)
-            df.loc[df["name"] == name, "image"] = "Not found"
+            images.append("Not found")
         else:
-            df.loc[df["name"] == name, "image"] = base64.b64encode(image).decode("ascii")
+            images.append(base64.b64encode(image).decode("ascii"))
+
+    # set the image column (aka a series) to the dataframe
+    df = df.with_columns(
+        pl.Series("image", images)
+    )
 
     df = pokemon_service.sort_dataframe(
         dataframe=df,
@@ -84,10 +90,14 @@ async def get_parquet_from_csv(
         sort_direction=sort_direction,
     )
 
-    parquet_file = df.to_parquet()
+    # create an in memory parquet file
+    parquet_file: BytesIO = BytesIO()
+    df.write_parquet(file=parquet_file)
+
+    parquet_file_as_bytes: bytes = parquet_file.getvalue()
 
     return Response(
-        content=parquet_file,
+        content=parquet_file_as_bytes,
         media_type="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=pokemon.parquet"},
     )
