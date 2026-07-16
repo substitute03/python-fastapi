@@ -1,4 +1,5 @@
 import base64
+import zipfile
 import polars as pl
 
 from functools import lru_cache
@@ -30,10 +31,13 @@ async def get_pokemon_image(pokemon_name: str, pokemon_service: PokemonService =
         return Response(content=image, media_type="image/png")
 
 
-@app.post("/pokemon/images/", response_model=PokemonImagesResponse)
-async def get_pokemon_images(pokemon_names: list[str], pokemon_service: PokemonService = Depends(get_pokemon_service)):
+@app.post("/pokemon/images/base64", response_model=PokemonImagesResponse)
+async def get_pokemon_images_base64(pokemon_names: list[str], pokemon_service: PokemonService = Depends(get_pokemon_service)):
     bytes_images_by_name: dict[str, bytes] = {}
     could_not_get_images: list[str] = []
+
+    # remove duplicates (a set cannot have duplicates)
+    pokemon_names = list(set(pokemon_names))
 
     for name in pokemon_names:
         image_or_none = pokemon_service.get_image(name)
@@ -55,6 +59,44 @@ async def get_pokemon_images(pokemon_names: list[str], pokemon_service: PokemonS
             could_not_get_images=could_not_get_images,
         )
 
+@app.post("/pokemon/images")
+async def get_pokemon_images(pokemon_names: list[str], pokemon_service: PokemonService = Depends(get_pokemon_service)):
+    bytes_images_by_name: dict[str, bytes] = {}
+    could_not_get_images: list[str] = []
+
+    # remove duplicates (a set cannot have duplicates)
+    pokemon_names = list(set(pokemon_names))
+
+    for name in pokemon_names:
+        image_or_none = pokemon_service.get_image(name)
+
+        if image_or_none is None:
+            could_not_get_images.append(name)
+        else:
+            bytes_images_by_name[name] = image_or_none
+
+    if len(bytes_images_by_name) == 0:
+        raise HTTPException(status_code=404, detail="Failed to get any images")
+
+    # create a zip folder of jpgs
+    zip_folder: BytesIO = BytesIO()
+    with zipfile.ZipFile(zip_folder, "w") as zip_file:
+        for name in bytes_images_by_name:
+            # add as jpg files
+            zip_file.writestr(name + ".jpg", bytes_images_by_name[name])
+
+        # add a txt file to this zip folder with list of pokemon names
+        # that could not be found
+        if len(could_not_get_images) > 0:
+            zip_file.writestr("could_not_get_images.txt", "\n".join(could_not_get_images))
+
+    zip_folder_as_bytes: bytes = zip_folder.getvalue()
+
+    return Response(
+        content=zip_folder_as_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=pokemon.zip"},
+    )
 
 @app.post("/pokemon/ideas/csv-to-parquet", response_model=None)
 async def get_parquet_from_csv(
