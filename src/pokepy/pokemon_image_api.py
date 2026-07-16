@@ -1,17 +1,30 @@
 import base64
-from io import BytesIO
 import polars as pl
 
-from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
-from pokepy import pokemon_service
+from functools import lru_cache
+from io import BytesIO
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile
 from pokepy.models.response import PokemonImagesResponse
-from pokepy.pokemon_service import SortDirection, get_image
+from pokepy.pokemon_service import SortDirection, PokemonService
+from pokepy.pokemon_repository import PokemonRepository
 
 app = FastAPI()
 
+# Dependency injection
+# lru_cache is a Python decorator that caches the result of the function.
+# If it is called again with the same arguments, it will return the cached result instead of calling the function again.
+
+@lru_cache
+def get_pokemon_repository() -> PokemonRepository:
+    return PokemonRepository()
+
+def get_pokemon_service(pokemon_repository: PokemonRepository = Depends(get_pokemon_repository)) -> PokemonService:
+    return PokemonService(pokemon_repository)
+
+
 @app.get("/pokemon/image/{pokemon_name}")
-async def get_pokemon_image(pokemon_name: str):
-    image = get_image(pokemon_name)
+async def get_pokemon_image(pokemon_name: str, pokemon_service: PokemonService = Depends(get_pokemon_service)):
+    image = pokemon_service.get_image(pokemon_name)
 
     if image is None:
         raise HTTPException(status_code=404, detail="Pokemon not found")
@@ -20,12 +33,12 @@ async def get_pokemon_image(pokemon_name: str):
 
 
 @app.post("/pokemon/images/", response_model=PokemonImagesResponse)
-async def get_pokemon_images(pokemon_names: list[str]):
+async def get_pokemon_images(pokemon_names: list[str], pokemon_service: PokemonService = Depends(get_pokemon_service)):
     bytes_images_by_name: dict[str, bytes] = {}
     could_not_get_images: list[str] = []
 
     for name in pokemon_names:
-        image_or_none = get_image(name)
+        image_or_none = pokemon_service.get_image(name)
 
         if image_or_none is None:
             could_not_get_images.append(name)
@@ -50,6 +63,7 @@ async def get_parquet_from_csv(
     csv_file: UploadFile = File(...),
     sort_by_field: str = Form(...),
     sort_direction: SortDirection = Form(...),
+    pokemon_service: PokemonService = Depends(get_pokemon_service),
 ):
     could_not_get_images: list[str] = []
 
@@ -71,7 +85,7 @@ async def get_parquet_from_csv(
     # build a list strings ("Not found" or the base64 string) for each pokemon
     images: list[str] = []
     for name in df["name"]:
-        image = get_image(name)
+        image = pokemon_service.get_image(name)
 
         if image is None:
             could_not_get_images.append(name)

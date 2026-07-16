@@ -1,11 +1,10 @@
 from pathlib import Path
-
-from pokepy.pokemon_service import get_image, save_image
+from pokepy.pokemon_service import PokemonService
+from pokepy.pokemon_repository import PokemonRepository
 
 RED = "\033[31m"
 GREEN = "\033[32m"
 WHITE = "\033[0m"
-
 
 def main():
     name = input(
@@ -21,15 +20,16 @@ def main():
         saveLocation = Path.home() / "Downloads"
         print(f"No save location provided, using default location: {saveLocation}")
 
+    pokemon_service = PokemonService(PokemonRepository())
     for name in names:
-        image = get_image(name.strip())
+        image = pokemon_service.get_image(name.strip())
 
         if image is None:
             print(f"{RED}Failed to get image for {name}{WHITE}")
             continue
 
         filepath = Path(saveLocation) / f"{name.strip().lower()}.png"
-        save_image(image, str(filepath))
+        pokemon_service.save_image(image, str(filepath))
 
     print(f"{GREEN}Image/s saved to {saveLocation}{WHITE}")
 

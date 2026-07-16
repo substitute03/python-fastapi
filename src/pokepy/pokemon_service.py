@@ -3,57 +3,65 @@ import requests
 from enum import Enum
 from fastapi import HTTPException
 from polars import DataFrame
+
+from pokepy.pokemon_repository import PokemonRepository
 class SortDirection(Enum):
     ASCENDING = "asc"
     DESCENDING = "desc"
 
-def get_image(pokemon_name: str) -> bytes | None:
-    url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
+class PokemonService:
+    def __init__(self, pokemon_repository: PokemonRepository):
+        self.pokemon_repository = pokemon_repository
 
-    try:
-        response = requests.get(url)
+    def get_image(self, pokemon_name: str) -> bytes | None:
+        url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
 
-        if response.status_code == 404:
+        try:
+            response = requests.get(url)
+
+            if response.status_code == 404:
+                return None
+
+            json_response = response.json()
+
+            if "sprites" not in json_response or "front_default" not in json_response["sprites"]:
+                print(f"No image found for {pokemon_name}")
+                return None
+
+            # use the image URL from the response to get the image
+            image_url = json_response["sprites"]["front_default"]
+            image = requests.get(image_url)
+            image.raise_for_status()
+
+            return image.content
+        except HTTPException:
             return None
 
-        json_response = response.json()
 
-        if "sprites" not in json_response or "front_default" not in json_response["sprites"]:
-            print(f"No image found for {pokemon_name}")
-            return None
+    def save_image(self, image: bytes, saveLocation: str):
+        with open(saveLocation, "wb") as file:
+            file.write(image)
 
-        # use the image URL from the response to get the image
-        image_url = json_response["sprites"]["front_default"]
-        image = requests.get(image_url)
-        image.raise_for_status()
+    def save_image_to_dynamodb(self, image: bytes, name: str):
+        self.pokemon_repository.create_pokemon(name, image)
 
-        return image.content
-    except HTTPException:
-        return None
+    def sort_dataframe(self, dataframe: DataFrame, column_name: str, sort_direction: SortDirection) -> DataFrame:
+        sort_desc = (
+            True if sort_direction == SortDirection.DESCENDING
+            else False
+        )
 
+        sorted_dataframe = (dataframe
+            .sort(by=column_name, descending=sort_desc))
 
-def save_image(image: bytes, saveLocation: str):
-    with open(saveLocation, "wb") as file:
-        file.write(image)
-
-
-def sort_dataframe(dataframe: DataFrame, column_name: str, sort_direction: SortDirection) -> DataFrame:
-    sort_desc = (
-        True if sort_direction == SortDirection.DESCENDING
-        else False
-    )
-
-    sorted_dataframe = (dataframe
-        .sort(by=column_name, descending=sort_desc))
-
-    return sorted_dataframe
+        return sorted_dataframe
 
 
-def check_for_columns(dataframe: DataFrame, column_names: list[str]) -> list[str]:
-    missing_columns: list[str] = []
+    def check_for_columns(self, dataframe: DataFrame, column_names: list[str]) -> list[str]:
+        missing_columns: list[str] = []
 
-    for name in column_names:
-        if name not in dataframe.columns:
-            missing_columns.append(name)
+        for name in column_names:
+            if name not in dataframe.columns:
+                missing_columns.append(name)
 
-    return missing_columns
+        return missing_columns

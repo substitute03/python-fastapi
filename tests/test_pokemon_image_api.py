@@ -1,8 +1,18 @@
 from polars import DataFrame
-from pokepy import pokemon_service
+import pytest
+from pokepy.pokemon_service import PokemonService
+from pokepy.pokemon_repository import PokemonRepository
 
 
-def test_missing_column_names_returned_when_columns_missing():
+@pytest.fixture
+def pokemon_repository() -> PokemonRepository:
+    return PokemonRepository()
+
+@pytest.fixture
+def pokemon_service(pokemon_repository: PokemonRepository) -> PokemonService:
+    return PokemonService(pokemon_repository)
+
+def test_missing_column_names_returned_when_columns_missing(pokemon_service: PokemonService):
     df = DataFrame({
         "name": ["Bulbasaur", "Charmander", "Squirtle"],
         "type": ["Grass", "Fire", "Water"],
@@ -24,7 +34,7 @@ def test_missing_column_names_returned_when_columns_missing():
     assert result.__contains__("Spe")
 
 
-def test_http_exception_not_thrown_expected_columns_are_present():
+def test_http_exception_not_thrown_expected_columns_are_present(pokemon_service: PokemonService):
     df = DataFrame({
         "name": ["Bulbasaur", "Charmander", "Squirtle"],
         "type": ["Grass", "Fire", "Water"],
