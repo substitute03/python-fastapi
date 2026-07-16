@@ -1,7 +1,6 @@
 import requests
 
 from enum import Enum
-from fastapi import HTTPException
 from polars import DataFrame
 
 from pokepy.pokemon_repository import PokemonRepository
@@ -14,8 +13,12 @@ class PokemonService:
         self.pokemon_repository = pokemon_repository
 
     def get_image(self, pokemon_name: str) -> bytes | None:
-        url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
+        pokemon = self.pokemon_repository.get_pokemon(pokemon_name)
 
+        if pokemon is not None:
+            return pokemon.image_bytes
+
+        url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
         try:
             response = requests.get(url)
 
@@ -33,8 +36,12 @@ class PokemonService:
             image = requests.get(image_url)
             image.raise_for_status()
 
+            # save to the DB so we don't have to make the API call again
+            self.pokemon_repository.create_pokemon(pokemon_name, image.content)
+            
             return image.content
-        except HTTPException:
+        except requests.RequestException as e:
+            print(f"HTTPError getting image for {pokemon_name}: {e}")
             return None
 
 

@@ -1,3 +1,4 @@
+from unittest import mock
 from polars import DataFrame
 import pytest
 from pokepy.pokemon_service import PokemonService
@@ -5,11 +6,11 @@ from pokepy.pokemon_repository import PokemonRepository
 
 
 @pytest.fixture
-def pokemon_repository() -> PokemonRepository:
-    return PokemonRepository()
+def pokemon_repository() -> mock.Mock:
+    return mock.Mock(spec=PokemonRepository)
 
 @pytest.fixture
-def pokemon_service(pokemon_repository: PokemonRepository) -> PokemonService:
+def pokemon_service(pokemon_repository: mock.Mock) -> PokemonService:
     return PokemonService(pokemon_repository)
 
 def test_missing_column_names_returned_when_columns_missing(pokemon_service: PokemonService):

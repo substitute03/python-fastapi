@@ -13,14 +13,12 @@ app = FastAPI()
 # Dependency injection
 # lru_cache is a Python decorator that caches the result of the function.
 # If it is called again with the same arguments, it will return the cached result instead of calling the function again.
-
 @lru_cache
 def get_pokemon_repository() -> PokemonRepository:
     return PokemonRepository()
 
 def get_pokemon_service(pokemon_repository: PokemonRepository = Depends(get_pokemon_repository)) -> PokemonService:
     return PokemonService(pokemon_repository)
-
 
 @app.get("/pokemon/image/{pokemon_name}")
 async def get_pokemon_image(pokemon_name: str, pokemon_service: PokemonService = Depends(get_pokemon_service)):

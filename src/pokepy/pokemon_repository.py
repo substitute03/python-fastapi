@@ -16,7 +16,9 @@ class PokemonRepository:
             region_name="eu-west-2"
         )
 
-        self._create_table()
+        # Create the Pokemon table if it doesn't exist. This is just because we are using LocalStack
+        # which drops everything when it shuts down.
+        self._create_table() 
 
     def _create_table(self):
         table_exists: bool = "pokemon" in self.db.list_tables()["TableNames"]
@@ -36,7 +38,7 @@ class PokemonRepository:
             TableName="pokemon",
             Item={
                 "name": {"S": name},
-                "image": {"B": image_bytes}
+                "image_bytes": {"B": image_bytes}
             }
         )
 
@@ -46,12 +48,12 @@ class PokemonRepository:
             Key={"name": {"S": name}}
         )
 
-        if not response["Item"]:
+        if "Item" not in response:
             return None
 
         pokemon = Pokemon(
             name=response["Item"]["name"]["S"],
-            image_bytes=response["Item"]["image"]["B"]
+            image_bytes=response["Item"]["image_bytes"]["B"]
         )
 
         return pokemon

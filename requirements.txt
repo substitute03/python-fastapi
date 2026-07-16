@@ -60,3 +60,5 @@ userpath==1.9.2
 uvicorn==0.51.0
 watchfiles==1.2.0
 websockets==16.0
+
+polars

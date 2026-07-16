@@ -15,15 +15,17 @@ def pokemon_dataframe() -> DataFrame:
     })
 
 @pytest.fixture
-def pokemon_repository() -> PokemonRepository:
+def pokemon_repository() -> mock.Mock:
     return mock.Mock(spec=PokemonRepository)
 
 @pytest.fixture
-def pokemon_service(pokemon_repository: PokemonRepository) -> PokemonService:
+def pokemon_service(pokemon_repository: mock.Mock) -> PokemonService:
     return PokemonService(pokemon_repository)
 
 @mock.patch("pokepy.pokemon_service.requests.get")
-def test_get_image_returns_none_when_pokemon_not_found(mock_get, pokemon_service: PokemonService):
+def test_get_image_returns_none_when_pokemon_not_found(mock_get, pokemon_service: PokemonService, pokemon_repository: mock.Mock):
+    pokemon_repository.get_pokemon.return_value = None
+
     mock_response = mock.Mock()
     mock_response.status_code = 404
     mock_get.return_value = mock_response
