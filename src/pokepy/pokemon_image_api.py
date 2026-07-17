@@ -98,11 +98,12 @@ async def get_pokemon_images(pokemon_names: list[str], pokemon_service: PokemonS
         headers={"Content-Disposition": "attachment; filename=pokemon.zip"},
     )
 
-@app.post("/pokemon/ideas/csv-to-parquet", response_model=None)
+@app.post("/pokemon/csv-to-parquet", response_model=None)
 async def get_parquet_from_csv(
     csv_file: UploadFile = File(...),
-    sort_by_field: str = Form(...),
-    sort_direction: SortDirection = Form(...),
+    sort_by_field: str = Form(default=None),
+    sort_direction: SortDirection = Form(default=None),
+    add_images: bool = Form(default=False),
     pokemon_service: PokemonService = Depends(get_pokemon_service),
 ):
     could_not_get_images: list[str] = []
@@ -110,7 +111,11 @@ async def get_parquet_from_csv(
     # df: DataFrame = pd.read_csv(csv_file.file)
     df = pl.read_csv(csv_file.file)
 
-    missing_columns = pokemon_service.check_for_columns(df, ["name", sort_by_field])
+    column_names: list[str] = ["name"]
+    if sort_by_field is not None:
+        column_names.append(sort_by_field)
+
+    missing_columns = pokemon_service.check_for_columns(df, column_names)
 
     if len(missing_columns) > 0:
         error: str = ""
@@ -122,36 +127,41 @@ async def get_parquet_from_csv(
 
         raise HTTPException(status_code=400, detail=error)
 
-    # build a list strings ("Not found" or the base64 string) for each pokemon
-    images: list[str] = []
-    for name in df["name"]:
-        image = pokemon_service.get_image(name)
+    if add_images:
+        # build a list strings ("Not found" or the base64 string) for each pokemon
+        images: list[str] = []
+        for name in df["name"]:
+            image = pokemon_service.get_image(name)
 
-        if image is None:
-            could_not_get_images.append(name)
-            images.append("Not found")
-        else:
-            images.append(base64.b64encode(image).decode("ascii"))
+            if image is None:
+                could_not_get_images.append(name)
+                images.append("Not found")
+            else:
+                images.append(base64.b64encode(image).decode("ascii"))
 
-    # set the image column (aka a series) to the dataframe
-    df = df.with_columns(
-        pl.Series("image", images)
-    )
+        # set the image column (aka a series) to the dataframe
+        df = df.with_columns(
+            pl.Series("image", images)
+        )
 
-    df = pokemon_service.sort_dataframe(
-        dataframe=df,
-        column_name=sort_by_field,
-        sort_direction=sort_direction,
-    )
+    if sort_by_field is not None and sort_direction is not None:
+        df = pokemon_service.sort_dataframe(
+            dataframe=df,
+            column_name=sort_by_field,
+            sort_direction=sort_direction,
+        )
 
     # create an in memory parquet file
     parquet_file: BytesIO = BytesIO()
     df.write_parquet(file=parquet_file)
+
+    base_name = (csv_file.filename or "pokemon").removesuffix(".csv")
+    parquet_file.name = f"{base_name}.parquet"
 
     parquet_file_as_bytes: bytes = parquet_file.getvalue()
 
     return Response(
         content=parquet_file_as_bytes,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=pokemon.parquet"},
+        headers={f"Content-Disposition": f"attachment; filename={parquet_file.name}"},
     )

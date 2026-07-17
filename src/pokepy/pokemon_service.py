@@ -4,9 +4,12 @@ from enum import Enum
 from polars import DataFrame
 
 from pokepy.pokemon_repository import PokemonRepository
+
+
 class SortDirection(Enum):
     ASCENDING = "asc"
     DESCENDING = "desc"
+
 
 class PokemonService:
     def __init__(self, pokemon_repository: PokemonRepository):
@@ -38,12 +41,11 @@ class PokemonService:
 
             # save to the DB so we don't have to make the API call again
             self.pokemon_repository.create_pokemon(pokemon_name, image.content)
-            
+
             return image.content
         except requests.RequestException as e:
             print(f"HTTPError getting image for {pokemon_name}: {e}")
             return None
-
 
     def save_image(self, image: bytes, saveLocation: str):
         with open(saveLocation, "wb") as file:
@@ -59,10 +61,9 @@ class PokemonService:
         )
 
         sorted_dataframe = (dataframe
-            .sort(by=column_name, descending=sort_desc))
+                            .sort(by=column_name, descending=sort_desc))
 
         return sorted_dataframe
-
 
     def check_for_columns(self, dataframe: DataFrame, column_names: list[str]) -> list[str]:
         missing_columns: list[str] = []
